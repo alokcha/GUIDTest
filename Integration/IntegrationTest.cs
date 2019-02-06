@@ -96,7 +96,7 @@ namespace GUIDTest.Integration
         /// </summary>
         /// <returns></returns>
         [Fact]
-        public async void TestCreate()
+        public async void TestCreateUpdate()
         {
             var validExpiry = new DateTimeOffset(DateTime.Now.AddDays(200)).ToUnixTimeSeconds();
 
@@ -119,6 +119,33 @@ namespace GUIDTest.Integration
             responseObj = await TryPost(responseObj.guid, new { guid = responseObj.guid, expire = validExpiry, user = newUser });
             // test if the user name is changed to the new one
             Assert.Equal(newUser, responseObj.user);
+        }
+
+        /// <summary>
+        /// Simple Test for delete
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async void TestDelete()
+        {
+            var validExpiry = new DateTimeOffset(DateTime.Now.AddDays(200)).ToUnixTimeSeconds();
+
+            // create a new guid
+            string guid = Guid.NewGuid().ToString();
+            // Call Create API with the new guid and a valid expiry time
+            var responseObj = await TryPost(guid, new { guid = guid, expire = validExpiry, user = "T.B. Del" });
+            // test if guid matches with the one in response
+            Assert.Equal(guid, responseObj.guid);
+
+            var response = await _client.DeleteAsync($"http://localhost:5002/api/guid/{guid}");
+            // confirm the Delete API's response
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+
+            // attempt to fetch the deleted guid
+            response = await _client.GetAsync($"http://localhost:5002/api/guid/{guid}");
+            // confirm the expected response
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         /// <summary>
@@ -167,7 +194,7 @@ namespace GUIDTest.Integration
         [Fact]
         public async void TestTimeExpiry()
         {
-            var justValidExpiry = new DateTimeOffset(DateTime.Now.AddSeconds(2)).ToUnixTimeSeconds();            
+            var justValidExpiry = new DateTimeOffset(DateTime.Now.AddSeconds(2)).ToUnixTimeSeconds();
 
             // create a new guid
             string guid = Guid.NewGuid().ToString();
@@ -175,7 +202,7 @@ namespace GUIDTest.Integration
             var responseObj = await TryPost(guid, new { guid = guid, expire = justValidExpiry, user = "R. Bolton" });
             // confirm the response 
             Assert.Equal(guid, responseObj.guid);
-            
+
             // wait for the this guid's data to expire
             await Task.Delay(3000);
 
