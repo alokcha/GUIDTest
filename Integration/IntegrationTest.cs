@@ -122,7 +122,7 @@ namespace GUIDTest.Integration
         }
 
         /// <summary>
-        /// Simple Test for Invalid Operations
+        /// Test for Invalid Operations
         /// </summary>
         /// <returns></returns>
         [Fact]
@@ -159,6 +159,30 @@ namespace GUIDTest.Integration
             response = await _client.GetAsync($"http://localhost:5002/api/guid/{guid}");
             // test the GET API's response
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+        /// <summary>
+        /// Test for Time expiring between requests
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async void TestTimeExpiry()
+        {
+            var justValidExpiry = new DateTimeOffset(DateTime.Now.AddSeconds(2)).ToUnixTimeSeconds();            
+
+            // create a new guid
+            string guid = Guid.NewGuid().ToString();
+            // Call the Create API with the new guid and an expiry time that is valid, but almost about to expire
+            var responseObj = await TryPost(guid, new { guid = guid, expire = justValidExpiry, user = "R. Bolton" });
+            // confirm the response 
+            Assert.Equal(guid, responseObj.guid);
+            
+            // wait for the this guid's data to expire
+            await Task.Delay(3000);
+
+            // Update data for the same guid, but do not pass any new expire time
+            var response = await Post(guid, JsonConvert.SerializeObject(new { user = "D. Shade" }));
+            // check for expected resonse - the record should get removed
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }
